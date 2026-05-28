@@ -1,0 +1,44 @@
+name: Build APK
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Unzip and Build
+        run: |
+          unzip glideboard.zip -d project
+
+          # Keystore decode karo
+          BASE64=$(find project -name "debug.keystore.base64" | head -1)
+          if [ -n "$BASE64" ]; then
+            base64 -d "$BASE64" > "$(dirname $BASE64)/debug.keystore"
+            echo "Keystore ready!"
+          fi
+
+          # Project dhundo aur build karo
+          BUILD_FILE=$(find project -name "settings.gradle*" | head -1)
+          PROJECT_DIR=$(dirname "$BUILD_FILE")
+          cd "$PROJECT_DIR"
+
+          if [ ! -f "gradlew" ]; then
+            gradle wrapper
+            chmod +x gradlew
+          else
+            chmod +x gradlew
+          fi
+          ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GlideBoard-APK
+          path: "**/app/build/outputs/apk/debug/app-debug.apk"
