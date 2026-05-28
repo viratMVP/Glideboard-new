@@ -14,28 +14,25 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Unzip and Build
+      - name: Unzip project
+        run: unzip glideboard.zip -d project
+
+      - name: Decode Keystore
         run: |
-          unzip glideboard.zip -d project
-
-          # Keystore decode karo
-          BASE64=$(find project -name "debug.keystore.base64" | head -1)
-          if [ -n "$BASE64" ]; then
-            base64 -d "$BASE64" > "$(dirname $BASE64)/debug.keystore"
-            echo "Keystore ready!"
-          fi
-
-          # Project dhundo aur build karo
-          BUILD_FILE=$(find project -name "settings.gradle*" | head -1)
-          PROJECT_DIR=$(dirname "$BUILD_FILE")
-          cd "$PROJECT_DIR"
-
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper
-            chmod +x gradlew
+          if [ -f "project/debug.keystore.base64" ]; then
+            base64 -d project/debug.keystore.base64 > project/debug.keystore
+            echo "✅ Keystore created!"
+            ls -la project/debug.keystore
           else
-            chmod +x gradlew
+            echo "❌ Base64 file not found!"
+            find project -name "*.base64" -o -name "*.keystore"
           fi
+
+      - name: Build APK
+        run: |
+          cd project
+          gradle wrapper
+          chmod +x gradlew
           ./gradlew assembleDebug
 
       - uses: actions/upload-artifact@v4
