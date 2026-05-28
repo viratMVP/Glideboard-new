@@ -17,23 +17,24 @@ jobs:
       - name: Unzip project
         run: unzip glideboard.zip -d project
 
-      - name: Decode Keystore
+      - name: Setup Keystore
         run: |
-          if [ -f "project/debug.keystore.base64" ]; then
-            base64 -d project/debug.keystore.base64 > project/debug.keystore
-            echo "✅ Keystore created!"
-            ls -la project/debug.keystore
-          else
-            echo "❌ Base64 file not found!"
-            find project -name "*.base64" -o -name "*.keystore"
-          fi
+          mkdir -p ~/.android
+          base64 -d project/debug.keystore.base64 > project/debug.keystore
+          cp project/debug.keystore project/app/debug.keystore
+          cp project/debug.keystore ~/.android/debug.keystore
+          echo "Keystore locations:"
+          ls -la project/debug.keystore
+          ls -la project/app/debug.keystore
+          echo "--- Signing config in build.gradle ---"
+          grep -A 10 -i "signing\|keystore" project/app/build.gradle.kts || true
 
       - name: Build APK
         run: |
           cd project
           gradle wrapper
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
