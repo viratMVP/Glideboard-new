@@ -15,26 +15,34 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Unzip project
-        run: unzip glideboard.zip -d project
+        run: |
+          unzip glideboard.zip -d project
+          echo "=== ZIP Contents ==="
+          find project -maxdepth 3 | head -40
 
-      - name: Setup Keystore
+      - name: Generate Keystore
         run: |
           mkdir -p ~/.android
-          base64 -d project/debug.keystore.base64 > project/debug.keystore
-          cp project/debug.keystore project/app/debug.keystore
-          cp project/debug.keystore ~/.android/debug.keystore
-          echo "Keystore locations:"
-          ls -la project/debug.keystore
-          ls -la project/app/debug.keystore
-          echo "--- Signing config in build.gradle ---"
-          grep -A 10 -i "signing\|keystore" project/app/build.gradle.kts || true
+          keytool -genkey -v \
+            -keystore ~/.android/debug.keystore \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          cp ~/.android/debug.keystore project/debug.keystore
+          cp ~/.android/debug.keystore project/app/debug.keystore
+          echo "✅ Keystore ready!"
 
       - name: Build APK
         run: |
           cd project
           gradle wrapper
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon \
+            -Pandroid.injected.signing.store.file=$HOME/.android/debug.keystore \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=androiddebugkey \
+            -Pandroid.injected.signing.key.password=android
 
       - uses: actions/upload-artifact@v4
         with:
