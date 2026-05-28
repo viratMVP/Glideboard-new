@@ -16,7 +16,7 @@ jobs:
 
       - name: Unzip and Build
         run: |
-          unzip glideboard.zip(1) -d project
+          unzip glideboard.zip -d project
 
           # Keystore decode karo
           BASE64=$(find project -name "debug.keystore.base64" | head -1)
